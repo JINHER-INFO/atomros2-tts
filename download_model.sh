@@ -7,7 +7,7 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 MODELS_DIR="$SCRIPT_DIR/models"
-NAME="sherpa-onnx-vits-zh-hf-fanchen-C"
+NAME="vits-zh-hf-fanchen-C"
 URL="https://github.com/k2-fsa/sherpa-onnx/releases/download/tts-models/${NAME}.tar.bz2"
 
 mkdir -p "$MODELS_DIR"

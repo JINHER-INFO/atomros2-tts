@@ -15,7 +15,7 @@ import (
 
 var (
 	port         = flag.String("port", "54087", "HTTP port")
-	modelDir     = flag.String("model-dir", "./models/sherpa-onnx-vits-zh-hf-fanchen-C", "Sherpa-ONNX TTS model directory")
+	modelDir     = flag.String("model-dir", "./models/vits-zh-hf-fanchen-C", "Sherpa-ONNX TTS model directory")
 	threads      = flag.Int("threads", 2, "CPU threads for inference")
 	defaultSid   = flag.Int("sid", 0, "Default speaker ID")
 	defaultSpeed = flag.Float64("speed", 1.0, "Default speech speed (1.0 = normal)")

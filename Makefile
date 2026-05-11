@@ -1,7 +1,7 @@
 .PHONY: all bootstrap build run model clean install bundle help
 
 BINARY     := tts-server
-MODEL_NAME := sherpa-onnx-vits-zh-hf-fanchen-C
+MODEL_NAME := vits-zh-hf-fanchen-C
 MODEL_URL  := https://github.com/k2-fsa/sherpa-onnx/releases/download/tts-models/$(MODEL_NAME).tar.bz2
 MODELS_DIR := ./models
 PORT       := 54087

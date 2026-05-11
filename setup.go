@@ -144,10 +144,10 @@ func hasModel(modelDir string) bool {
 // downloadAndExtractModel downloads the Sherpa-ONNX archive named after
 // the base name of modelDir and extracts it next to modelDir.
 //
-// Example: modelDir = "./models/sherpa-onnx-vits-zh-hf-fanchen-C"
-//   → archive: sherpa-onnx-vits-zh-hf-fanchen-C.tar.bz2
+// Example: modelDir = "./models/vits-zh-hf-fanchen-C"
+//   → archive: vits-zh-hf-fanchen-C.tar.bz2
 //   → URL:     https://github.com/k2-fsa/sherpa-onnx/releases/download/tts-models/<archive>
-//   → extract under ./models/ producing ./models/sherpa-onnx-vits-zh-hf-fanchen-C/
+//   → extract under ./models/ producing ./models/vits-zh-hf-fanchen-C/
 func downloadAndExtractModel(modelDir string) error {
 	parent := filepath.Dir(modelDir)
 	base := filepath.Base(modelDir)

@@ -25,7 +25,7 @@ PORT="${PORT:-54087}"
 PLAYER="${PLAYER:-aplay}"
 SERVICE="${SERVICE:-atomros2-tts}"
 
-MODEL_NAME="sherpa-onnx-vits-zh-hf-fanchen-C"
+MODEL_NAME="vits-zh-hf-fanchen-C"
 MODEL_URL="https://github.com/k2-fsa/sherpa-onnx/releases/download/tts-models/${MODEL_NAME}.tar.bz2"
 
 log()  { echo -e "\033[1;32m[install]\033[0m $*"; }
