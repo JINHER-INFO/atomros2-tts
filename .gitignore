@@ -1,0 +1,9 @@
+tts-server
+*.tar.bz2
+*.tar.gz
+models/
+dist/
+vendor/
+.idea/
+.vscode/
+*.log
