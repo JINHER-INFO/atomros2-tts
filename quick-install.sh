@@ -6,10 +6,10 @@
 #   - 1 model tarball  (~150MB) from upstream Sherpa-ONNX
 #
 # Usage:
-#   curl -fsSL https://raw.githubusercontent.com/bibiton/atomros2-tts/main/quick-install.sh | sudo bash
+#   curl -fsSL https://raw.githubusercontent.com/JINHER-INFO/atomros2-tts/main/quick-install.sh | sudo bash
 #
 # Env overrides:
-#   REPO        github repo                (default: bibiton/atomros2-tts)
+#   REPO        github repo                (default: JINHER-INFO/atomros2-tts)
 #   VERSION     release tag                (default: latest)
 #   TARGET_DIR  install location           (default: /opt/atomros2-tts)
 #   PORT        HTTP port                  (default: 54087)
@@ -18,7 +18,7 @@
 
 set -euo pipefail
 
-REPO="${REPO:-bibiton/atomros2-tts}"
+REPO="${REPO:-JINHER-INFO/atomros2-tts}"
 VERSION="${VERSION:-latest}"
 TARGET_DIR="${TARGET_DIR:-/opt/atomros2-tts}"
 PORT="${PORT:-54087}"

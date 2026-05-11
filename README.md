@@ -13,7 +13,7 @@
 ## ⚡ 一行安裝（板子上直接跑）
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/bibiton/atomros2-tts/main/quick-install.sh | sudo bash
+curl -fsSL https://raw.githubusercontent.com/JINHER-INFO/atomros2-tts/main/quick-install.sh | sudo bash
 ```
 
 完成後：
@@ -31,7 +31,7 @@ curl -X POST localhost:54087/speak \
 環境變數覆寫：
 ```bash
 PORT=12345 PLAYER=paplay TARGET_DIR=/srv/tts VERSION=v0.1.0 \
-  curl -fsSL https://raw.githubusercontent.com/bibiton/atomros2-tts/main/quick-install.sh | sudo bash
+  curl -fsSL https://raw.githubusercontent.com/JINHER-INFO/atomros2-tts/main/quick-install.sh | sudo bash
 ```
 
 ---
