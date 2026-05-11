@@ -9,6 +9,7 @@ import (
 	"os"
 	"os/exec"
 	"os/signal"
+	"strings"
 	"syscall"
 	"time"
 )
@@ -88,6 +89,7 @@ func main() {
 	log.Printf("warmup done in %dms — TTS ready", time.Since(warmStart).Milliseconds())
 
 	player := NewPlayer(*playerCmd)
+	cache := NewCache()
 
 	mux := http.NewServeMux()
 
@@ -157,6 +159,155 @@ func main() {
 			DurationMs: durationMs,
 			SampleRate: sr,
 		})
+	})
+
+	// /prepare — synthesize and cache by caller-supplied ID, do NOT play.
+	// Returns immediately; synthesis runs in background.
+	// Body: {"id":"node-3","text":"...","sid":0,"speed":1.0}
+	mux.HandleFunc("/prepare", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodPost {
+			writeJSON(w, 405, map[string]any{"error": "POST only"})
+			return
+		}
+		var req struct {
+			ID    string   `json:"id"`
+			Text  string   `json:"text"`
+			Sid   *int     `json:"sid,omitempty"`
+			Speed *float64 `json:"speed,omitempty"`
+		}
+		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+			writeJSON(w, 400, map[string]any{"error": "invalid JSON: " + err.Error()})
+			return
+		}
+		if req.ID == "" || req.Text == "" {
+			writeJSON(w, 400, map[string]any{"error": "id and text required"})
+			return
+		}
+		sid := *defaultSid
+		if req.Sid != nil {
+			sid = *req.Sid
+		}
+		speed := *defaultSpeed
+		if req.Speed != nil {
+			speed = *req.Speed
+		}
+
+		entry, created := cache.GetOrCreate(req.ID, req.Text, sid, speed)
+		if !created {
+			writeJSON(w, 200, map[string]any{
+				"ok": true, "id": req.ID, "state": entry.State, "cached": true,
+			})
+			return
+		}
+
+		go func() {
+			synthStart := time.Now()
+			pcm, sr, err := engine.Synthesize(req.Text, sid, speed)
+			if err != nil {
+				log.Printf("/prepare: synth failed id=%s: %v", req.ID, err)
+				cache.MarkFailed(req.ID, err.Error())
+				return
+			}
+			cache.MarkReady(req.ID, pcm, sr)
+			log.Printf("/prepare: id=%s text=%q synth=%dms duration=%dms",
+				req.ID, req.Text, time.Since(synthStart).Milliseconds(),
+				int64(len(pcm))*1000/int64(sr))
+		}()
+
+		writeJSON(w, 202, map[string]any{"ok": true, "id": req.ID, "state": "preparing"})
+	})
+
+	// /play — play cached audio by ID, then remove (unless keep=true).
+	// Body: {"id":"node-3","keep":false,"async":false}
+	mux.HandleFunc("/play", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodPost {
+			writeJSON(w, 405, map[string]any{"error": "POST only"})
+			return
+		}
+		var req struct {
+			ID    string `json:"id"`
+			Keep  bool   `json:"keep,omitempty"`
+			Async bool   `json:"async,omitempty"`
+		}
+		if err := json.NewDecoder(r.Body).Decode(&req); err != nil || req.ID == "" {
+			writeJSON(w, 400, map[string]any{"error": "id required"})
+			return
+		}
+
+		pcm, sr, state, errMsg := cache.TakeForPlay(req.ID)
+		switch state {
+		case "missing":
+			writeJSON(w, 404, map[string]any{"error": "not cached", "id": req.ID})
+			return
+		case "preparing":
+			writeJSON(w, 425, map[string]any{"error": "still preparing", "id": req.ID})
+			return
+		case "failed":
+			writeJSON(w, 500, map[string]any{"error": "prepare failed: " + errMsg, "id": req.ID})
+			return
+		case "playing":
+			writeJSON(w, 409, map[string]any{"error": "already playing", "id": req.ID})
+			return
+		}
+
+		durationMs := int64(len(pcm)) * 1000 / int64(sr)
+
+		play := func() {
+			playStart := time.Now()
+			err := player.Play(pcm, sr)
+			playMs := time.Since(playStart).Milliseconds()
+			cache.EndPlay(req.ID, !req.Keep, err)
+			if err != nil {
+				log.Printf("/play: id=%s player error: %v", req.ID, err)
+			} else {
+				log.Printf("/play: id=%s play=%dms duration=%dms removed=%v",
+					req.ID, playMs, durationMs, !req.Keep)
+			}
+		}
+
+		if req.Async {
+			go play()
+			writeJSON(w, 202, map[string]any{
+				"ok": true, "id": req.ID, "duration_ms": durationMs, "async": true,
+			})
+		} else {
+			play()
+			writeJSON(w, 200, map[string]any{
+				"ok": true, "id": req.ID, "duration_ms": durationMs, "removed": !req.Keep,
+			})
+		}
+	})
+
+	// /cache — GET to list, DELETE to evict (/cache/<id> or /cache?id=X)
+	mux.HandleFunc("/cache", func(w http.ResponseWriter, r *http.Request) {
+		switch r.Method {
+		case http.MethodGet:
+			items := cache.List()
+			writeJSON(w, 200, map[string]any{"count": len(items), "items": items})
+		case http.MethodDelete:
+			id := r.URL.Query().Get("id")
+			if id == "" {
+				writeJSON(w, 400, map[string]any{"error": "id required"})
+				return
+			}
+			existed := cache.Delete(id)
+			writeJSON(w, 200, map[string]any{"ok": true, "id": id, "existed": existed})
+		default:
+			writeJSON(w, 405, map[string]any{"error": "GET or DELETE only"})
+		}
+	})
+	mux.HandleFunc("/cache/", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodDelete {
+			writeJSON(w, 405, map[string]any{"error": "DELETE only"})
+			return
+		}
+		id := strings.TrimPrefix(r.URL.Path, "/cache/")
+		if id == "" {
+			writeJSON(w, 400, map[string]any{"error": "id required"})
+			return
+		}
+		existed := cache.Delete(id)
+		writeJSON(w, 200, map[string]any{"ok": true, "id": id, "existed": existed})
 	})
 
 	srv := &http.Server{
